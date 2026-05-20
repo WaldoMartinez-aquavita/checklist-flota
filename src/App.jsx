@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef } from "react";
 
-const CLIENT_ID = "605714222345-9ff98bnoid8vqd75nl4cqo90afl5vji9.apps.googleusercontent.com";
-const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
+// ─── Pegá acá la URL de tu Google Apps Script después de publicarlo ───────────
+const APPS_SCRIPT_URL = "";
 
 const CHECKLIST_ITEMS = [
   { id: "agua",        label: "Agua (radiador / reserva)",   icon: "💧", category: "Motor" },
@@ -96,10 +96,6 @@ const css = `
   .submit-btn.ready    { background:var(--accent); color:var(--black); }
   .submit-btn.disabled { background:var(--border); color:var(--muted); cursor:not-allowed; }
   .submit-btn.loading  { background:var(--accent); color:var(--black); opacity:.7; }
-  .google-btn { width:100%; padding:16px; border-radius:var(--radius); border:2px solid var(--border); background:var(--card); color:var(--text); font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:16px; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:12px; }
-  .user-badge { display:flex; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--ok); border-radius:var(--radius); padding:10px 14px; margin-bottom:12px; }
-  .user-badge span { font-size:13px; color:var(--ok); font-weight:600; flex:1; }
-  .user-badge button { background:transparent; border:1px solid var(--border); color:var(--muted); font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer; }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--ok); color:#fff; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:14px; letter-spacing:1px; padding:12px 24px; border-radius:30px; z-index:999; animation:fadeInUp .3s ease; white-space:nowrap; }
   .toast.error { background:var(--nok); }
   @keyframes fadeInUp { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
@@ -133,47 +129,19 @@ const css = `
   .config-wrap { padding:20px; }
   .config-card { background:var(--card); border:1.5px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
   .config-title { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:1px; text-transform:uppercase; color:var(--accent); margin-bottom:10px; }
-  .config-text  { font-size:13px; color:var(--muted); line-height:1.5; }
-  .config-input { width:100%; background:var(--panel); border:1.5px solid var(--border); border-radius:8px; color:var(--text); font-size:13px; padding:10px 12px; outline:none; margin-top:8px; }
+  .config-text { font-size:13px; color:var(--muted); line-height:1.6; }
+  .config-input { width:100%; background:var(--panel); border:1.5px solid var(--border); border-radius:8px; color:var(--text); font-size:13px; padding:10px 12px; outline:none; margin-top:8px; font-family:monospace; }
   .config-input:focus { border-color:var(--accent); }
   .config-btn { width:100%; margin-top:10px; padding:12px; border-radius:8px; border:none; background:var(--accent); color:var(--black); font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:14px; letter-spacing:1px; text-transform:uppercase; cursor:pointer; }
+  .step { display:flex; gap:10px; margin-bottom:10px; align-items:flex-start; }
+  .step-num { background:var(--accent); color:var(--black); border-radius:50%; width:22px; height:22px; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+  .step p { font-size:12px; color:var(--muted); line-height:1.5; }
+  .step a { color:var(--accent); }
+  code { background:var(--panel); padding:2px 6px; border-radius:4px; font-size:11px; color:var(--accent); }
 `;
-
-async function callApi(token, endpoint, method = "GET", body = null) {
-  const res = await fetch(`https://www.googleapis.com${endpoint}`, {
-    method,
-    headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
-    body: body ? JSON.stringify(body) : null,
-  });
-  if (!res.ok) { const err = await res.text(); throw new Error(`API ${res.status}: ${err}`); }
-  return res.json();
-}
-
-async function uploadHtmlToDrive(token, name, htmlContent, parentId) {
-  const meta = JSON.stringify({ name, mimeType: "text/html", parents: parentId ? [parentId] : undefined });
-  const boundary = "flota_bound_xyz";
-  const body = `--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: text/html\r\n\r\n${htmlContent}\r\n--${boundary}--`;
-  const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": `multipart/related; boundary="${boundary}"` },
-    body,
-  });
-  if (!res.ok) { const err = await res.text(); throw new Error(`Drive ${res.status}: ${err}`); }
-  return res.json();
-}
 
 export default function FleetChecklist() {
   const [view, setView]               = useState("checklist");
-  const [token, setToken]             = useState(sessionStorage.getItem("gtoken") || null);
-  const [userEmail, setUserEmail]     = useState(sessionStorage.getItem("gemail") || null);
-  const [gisReady, setGisReady]       = useState(false);
-  const clientRef                     = useRef(null);
-
-  const [folderId, setFolderId]       = useState(localStorage.getItem("fc_folder") || "");
-  const [sheetId, setSheetId]         = useState(localStorage.getItem("fc_sheet")  || "");
-  const [folderInput, setFolderInput] = useState(localStorage.getItem("fc_folder") || "");
-  const [sheetInput, setSheetInput]   = useState(localStorage.getItem("fc_sheet")  || "");
-
   const [tipo, setTipo]               = useState("salida");
   const [razonSocial, setRazonSocial] = useState("");
   const [vehiculo, setVehiculo]       = useState("");
@@ -186,53 +154,14 @@ export default function FleetChecklist() {
   const [toast, setToast]             = useState(null);
   const [logs, setLogs]               = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [scriptUrl, setScriptUrl]     = useState(localStorage.getItem("fc_script") || APPS_SCRIPT_URL);
+  const [scriptInput, setScriptInput] = useState(localStorage.getItem("fc_script") || APPS_SCRIPT_URL);
 
   const fileRef = useRef();
 
   const showToast = (msg, type = "ok") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
-  };
-
-  // Load Google Identity Services
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      clientRef.current = window.google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: (resp) => {
-          if (resp.error) { showToast("Error al iniciar sesión: " + resp.error, "error"); return; }
-          const t = resp.access_token;
-          setToken(t);
-          sessionStorage.setItem("gtoken", t);
-          // Get user email
-          fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-            headers: { Authorization: `Bearer ${t}` }
-          }).then(r => r.json()).then(info => {
-            setUserEmail(info.email);
-            sessionStorage.setItem("gemail", info.email);
-          });
-          showToast("✅ Sesión iniciada correctamente");
-        },
-      });
-      setGisReady(true);
-    };
-    document.head.appendChild(script);
-  }, []);
-
-  const signIn = () => {
-    if (clientRef.current) clientRef.current.requestAccessToken();
-  };
-
-  const signOut = () => {
-    if (token) window.google?.accounts.oauth2.revoke(token);
-    setToken(null); setUserEmail(null);
-    sessionStorage.removeItem("gtoken"); sessionStorage.removeItem("gemail");
-    showToast("Sesión cerrada");
   };
 
   const setCheck = (id, val) => setChecks(c => ({ ...c, [id]: val }));
@@ -254,82 +183,56 @@ export default function FleetChecklist() {
     if (!vehiculo || !chofer)  { showToast("Completá vehículo y playero", "error"); return; }
     if (!razonSocial)          { showToast("Seleccioná la razón social", "error"); return; }
     if (answered < total)      { showToast(`Faltan ${total - answered} ítems`, "error"); return; }
-    if (!token)                { showToast("Iniciá sesión con Google primero", "error"); return; }
-    if (!folderId || !sheetId) { showToast("Configurá carpeta y sheet en ⚙", "error"); return; }
+    if (!scriptUrl)            { showToast("Configurá la URL del script en ⚙", "error"); return; }
 
     setLoading(true);
     try {
-      const now     = new Date();
-      const dateStr = now.toLocaleDateString("es-AR");
-      const timeStr = now.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+      const now      = new Date();
+      const dateStr  = now.toLocaleDateString("es-AR");
+      const timeStr  = now.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
       const nokItems = CHECKLIST_ITEMS.filter(i => checks[i.id] === "nok").map(i => i.label);
-      const estadoFinal = hasNok ? "NOK: " + nokItems.join(", ") : "OK - COMPLETO";
+      const estado   = hasNok ? "NOK: " + nokItems.join(", ") : "OK - COMPLETO";
 
-      // 1. Append to Sheet
-      const row = [dateStr, timeStr, tipo.toUpperCase(), razonSocial, vehiculo, chofer, estadoFinal, obs || "-",
-        ...CHECKLIST_ITEMS.map(i => checks[i.id]?.toUpperCase() || "-")];
-      await callApi(token, `/v4/spreadsheets/${sheetId}/values/A1:append?valueInputOption=USER_ENTERED`, "POST", { values: [row] });
+      const payload = {
+        fecha: dateStr, hora: timeStr, tipo: tipo.toUpperCase(),
+        razonSocial, vehiculo, chofer, estado, obs: obs || "-",
+        items: CHECKLIST_ITEMS.reduce((acc, i) => { acc[i.label] = checks[i.id]?.toUpperCase() || "-"; return acc; }, {}),
+        fotos: photos.map(p => p.url),
+      };
 
-      // 2. Upload HTML to Drive
-      const nokHtml = nokItems.length ? `<p style="color:#e74c3c;font-weight:bold">⚠️ NOK: ${nokItems.join(", ")}</p>` : "";
-      const photosHtml = photos.map(p => `<img src="${p.url}" style="max-width:200px;max-height:150px;border-radius:6px;margin:4px"/>`).join("");
-      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Checklist ${tipo} ${vehiculo}</title>
-<style>body{font-family:Arial,sans-serif;max-width:600px;margin:40px auto}h1{color:#f5a623}
-table{width:100%;border-collapse:collapse;margin-top:16px}td,th{border:1px solid #ddd;padding:8px}
-th{background:#f5f5f5}.ok{color:#27ae60;font-weight:bold}.nok{color:#e74c3c;font-weight:bold}</style></head>
-<body><h1>🚛 CHECKLIST DE FLOTA</h1>
-<p><b>Tipo:</b> ${tipo.toUpperCase()} | <b>Fecha:</b> ${dateStr} ${timeStr}</p>
-<p><b>Razón Social:</b> ${razonSocial} | <b>Vehículo:</b> ${vehiculo} | <b>Playero:</b> ${chofer}</p>
-${nokHtml}<table><tr><th>Ítem</th><th>Categoría</th><th>Estado</th></tr>
-${CHECKLIST_ITEMS.map(i=>`<tr><td>${i.icon} ${i.label}</td><td>${i.category}</td><td class="${checks[i.id]}">${checks[i.id]?.toUpperCase()||"-"}</td></tr>`).join("")}
-</table>${obs?`<p style="margin-top:16px"><b>Obs:</b> ${obs}</p>`:""}
-${photosHtml?`<div style="margin-top:16px"><b>Fotos:</b><br>${photosHtml}</div>`:""}
-</body></html>`;
+      await fetch(scriptUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      await uploadHtmlToDrive(token,
-        `Checklist_${tipo}_${razonSocial.replace(/ /g,"_")}_${vehiculo.replace(/ /g,"_")}_${dateStr.replace(/\//g,"-")}_${timeStr.replace(/:/g,"h")}.html`,
-        html, folderId);
-
-      showToast("✅ Checklist guardado en Drive");
+      showToast("✅ Checklist guardado correctamente");
       setChecks({}); setPhotos([]); setObs(""); setRazonSocial(""); setVehiculo(""); setChofer("");
-
     } catch (e) {
-      console.error(e);
-      if (e.message.includes("401")) {
-        setToken(null); sessionStorage.removeItem("gtoken");
-        showToast("Sesión expirada — volvé a iniciar sesión", "error");
-      } else {
-        showToast("Error: " + e.message, "error");
-      }
+      showToast("Error de conexión: " + e.message, "error");
     } finally {
       setLoading(false);
     }
   };
 
   const loadLogs = async () => {
-    if (!token)   { showToast("Iniciá sesión primero", "error"); return; }
-    if (!sheetId) { showToast("Configurá el Sheet ID en ⚙", "error"); return; }
+    if (!scriptUrl) { showToast("Configurá la URL del script en ⚙", "error"); return; }
     setLoadingLogs(true);
     try {
-      const data = await callApi(token, `/v4/spreadsheets/${sheetId}/values/A1:Z500`);
-      const rows = (data.values || []).slice(0);
-      const parsed = rows.reverse().map((r, i) => ({
-        id: i, date: r[0], time: r[1], tipo: r[2], rs: r[3],
-        vehicle: r[4], driver: r[5], status: r[6], obs: r[7],
-      })).filter(r => r.vehicle);
-      setLogs(parsed);
+      const res  = await fetch(scriptUrl + "?action=get");
+      const data = await res.json();
+      setLogs((data.rows || []).reverse());
     } catch (e) {
-      if (e.message.includes("401")) { setToken(null); sessionStorage.removeItem("gtoken"); showToast("Sesión expirada", "error"); }
-      else showToast("Error: " + e.message, "error");
+      showToast("Error al cargar: " + e.message, "error");
     } finally {
       setLoadingLogs(false);
     }
   };
 
   const saveConfig = () => {
-    localStorage.setItem("fc_folder", folderInput);
-    localStorage.setItem("fc_sheet", sheetInput);
-    setFolderId(folderInput); setSheetId(sheetInput);
+    localStorage.setItem("fc_script", scriptInput);
+    setScriptUrl(scriptInput);
     showToast("Configuración guardada ✓");
   };
 
@@ -349,6 +252,7 @@ ${photosHtml?`<div style="margin-top:16px"><b>Fotos:</b><br>${photosHtml}</div>`
           </div>
         </div>
 
+        {/* ── CHECKLIST ── */}
         {view === "checklist" && (<>
           <div className="section-title">Tipo de control</div>
           <div className="type-row">
@@ -428,25 +332,12 @@ ${photosHtml?`<div style="margin-top:16px"><b>Fotos:</b><br>${photosHtml}</div>`
           </div>
 
           <div className="submit-wrap">
-            {!token ? (
-              <button className="google-btn" onClick={signIn} disabled={!gisReady}>
-                <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                Iniciar sesión con Google
-              </button>
-            ) : (
-              <>
-                <div className="user-badge">
-                  <span>✅ {userEmail || "Sesión activa"}</span>
-                  <button onClick={signOut}>Cerrar</button>
-                </div>
-                <button
-                  className={`submit-btn ${loading?"loading":answered===total&&vehiculo&&chofer&&razonSocial?"ready":"disabled"}`}
-                  onClick={!loading ? handleSubmit : undefined}
-                >
-                  {loading ? "Guardando..." : `✅ Confirmar ${tipo}`}
-                </button>
-              </>
-            )}
+            <button
+              className={`submit-btn ${loading?"loading":answered===total&&vehiculo&&chofer&&razonSocial?"ready":"disabled"}`}
+              onClick={!loading ? handleSubmit : undefined}
+            >
+              {loading ? "Guardando..." : `✅ Confirmar ${tipo}`}
+            </button>
             {hasNok && answered===total && (
               <p style={{textAlign:"center",color:"#e74c3c",fontSize:12,marginTop:10,fontWeight:600}}>
                 ⚠️ Hay ítems NOK — se guardará con alerta
@@ -455,43 +346,36 @@ ${photosHtml?`<div style="margin-top:16px"><b>Fotos:</b><br>${photosHtml}</div>`
           </div>
         </>)}
 
+        {/* ── SUPERVISOR ── */}
         {view === "supervisor" && (<>
           <div className="sup-header">
             <div className="sup-title">Panel de Control</div>
             <div className="sup-sub">Historial de checklists registrados</div>
           </div>
-          {!token && (
-            <div style={{padding:"20px"}}>
-              <button className="google-btn" onClick={signIn} disabled={!gisReady}>
-                <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                Iniciar sesión para ver el panel
-              </button>
-            </div>
-          )}
           {logs.length > 0 && (
             <div className="stats-grid">
               <div className="stat-card"><div className="stat-num yellow">{logs.length}</div><div className="stat-lbl">Total</div></div>
-              <div className="stat-card"><div className="stat-num green">{logs.filter(l=>l.status?.startsWith("OK")).length}</div><div className="stat-lbl">Sin NOK</div></div>
-              <div className="stat-card"><div className="stat-num red">{logs.filter(l=>!l.status?.startsWith("OK")).length}</div><div className="stat-lbl">Con NOK</div></div>
+              <div className="stat-card"><div className="stat-num green">{logs.filter(l=>l.estado?.startsWith("OK")).length}</div><div className="stat-lbl">Sin NOK</div></div>
+              <div className="stat-card"><div className="stat-num red">{logs.filter(l=>!l.estado?.startsWith("OK")).length}</div><div className="stat-lbl">Con NOK</div></div>
             </div>
           )}
           {loadingLogs && <div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Cargando...</div>}
-          {!loadingLogs && logs.length === 0 && token && (
-            <div className="log-empty"><div className="log-empty-icon">📋</div><p>Sin registros aún</p></div>
+          {!loadingLogs && logs.length === 0 && (
+            <div className="log-empty"><div className="log-empty-icon">📋</div><p>Sin registros aún</p><p style={{fontSize:12,marginTop:8}}>Los checklists aparecerán acá</p></div>
           )}
-          {logs.map(log => (
-            <div key={log.id} className="log-item">
+          {logs.map((log,i) => (
+            <div key={i} className="log-item">
               <div className="log-top">
-                <span className="log-vehicle">{log.vehicle}</span>
+                <span className="log-vehicle">{log.vehiculo}</span>
                 <div className="log-badges">
-                  {log.rs && <span className={`log-badge ${log.rs==="Aqua Vita"?"badge-av":"badge-sp"}`}>{log.rs}</span>}
+                  {log.razonSocial && <span className={`log-badge ${log.razonSocial==="Aqua Vita"?"badge-av":"badge-sp"}`}>{log.razonSocial}</span>}
                   <span className={`log-badge badge-${log.tipo?.toLowerCase()}`}>{log.tipo}</span>
                 </div>
               </div>
-              <div className="log-meta">📅 {log.date} {log.time} · 👤 {log.driver}</div>
+              <div className="log-meta">📅 {log.fecha} {log.hora} · 👤 {log.chofer}</div>
               <div className="log-items">
-                <span className={`li-chip ${log.status?.startsWith("OK")?"li-ok":"li-nok"}`}>
-                  {log.status?.startsWith("OK") ? "✓ Todo OK" : "⚠️ "+log.status}
+                <span className={`li-chip ${log.estado?.startsWith("OK")?"li-ok":"li-nok"}`}>
+                  {log.estado?.startsWith("OK") ? "✓ Todo OK" : "⚠️ "+log.estado}
                 </span>
               </div>
               {log.obs && log.obs!=="-" && <p style={{fontSize:12,color:"var(--muted)"}}>💬 {log.obs}</p>}
@@ -499,20 +383,26 @@ ${photosHtml?`<div style="margin-top:16px"><b>Fotos:</b><br>${photosHtml}</div>`
           ))}
         </>)}
 
+        {/* ── CONFIG ── */}
         {view === "config" && (<>
           <div className="sup-header" style={{marginBottom:4}}>
             <div className="sup-title">Configuración</div>
-            <div className="sup-sub">Google Drive y Sheets</div>
+            <div className="sup-sub">Google Apps Script</div>
           </div>
           <div className="config-wrap">
             <div className="config-card">
-              <div className="config-title">📁 Google Drive — Folder ID</div>
-              <input className="config-input" value={folderInput} onChange={e=>setFolderInput(e.target.value)} placeholder="ID de la carpeta de Drive..." />
+              <div className="config-title">🔗 URL del Apps Script</div>
+              <p className="config-text">Pegá acá la URL que te da Google Apps Script al publicar el script.</p>
+              <input className="config-input" value={scriptInput} onChange={e=>setScriptInput(e.target.value)} placeholder="https://script.google.com/macros/s/..." />
+              <button className="config-btn" onClick={saveConfig}>Guardar</button>
             </div>
             <div className="config-card">
-              <div className="config-title">📊 Google Sheets — Sheet ID</div>
-              <input className="config-input" value={sheetInput} onChange={e=>setSheetInput(e.target.value)} placeholder="ID del Google Sheet..." />
-              <button className="config-btn" onClick={saveConfig}>Guardar configuración</button>
+              <div className="config-title">📋 Cómo crear el Apps Script</div>
+              <div className="step"><div className="step-num">1</div><p>Abrí tu Google Sheet → menú <b>Extensiones</b> → <b>Apps Script</b></p></div>
+              <div className="step"><div className="step-num">2</div><p>Borrá todo el código que aparece y pegá el código que te pase</p></div>
+              <div className="step"><div className="step-num">3</div><p>Guardás → <b>Implementar</b> → <b>Nueva implementación</b> → Tipo: <b>Aplicación web</b></p></div>
+              <div className="step"><div className="step-num">4</div><p>En "Quién tiene acceso" elegís <b>Cualquier persona</b> → <b>Implementar</b></p></div>
+              <div className="step"><div className="step-num">5</div><p>Copiás la URL que aparece y la pegás arriba</p></div>
             </div>
           </div>
         </>)}
