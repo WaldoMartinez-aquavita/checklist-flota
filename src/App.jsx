@@ -210,15 +210,26 @@ export default function FleetChecklist() {
 
   const signIn = useCallback(() => {
     const CLIENT_ID = "605714222345-9ff98bnoid8vqd75nl4cqo90afl5vji9.apps.googleusercontent.com";
-    if (!CLIENT_ID) { showToast("Configurá el Client ID en Configuración", "error"); return; }
-    const params = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: window.location.origin, response_type: "token", scope: SCOPES, prompt: "select_account" });
+    const params = new URLSearchParams({
+      client_id: CLIENT_ID,
+      redirect_uri: window.location.origin + window.location.pathname,
+      response_type: "token",
+      scope: SCOPES,
+      prompt: "select_account",
+      include_granted_scopes: "true",
+    });
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   }, []);
 
   useState(() => {
-    const hash = new URLSearchParams(window.location.hash.slice(1));
+    // Parse token from URL hash after Google redirect
+    const hash = new URLSearchParams(window.location.hash.replace("#", ""));
     const t = hash.get("access_token");
-    if (t) { setToken(t); window.history.replaceState({}, "", window.location.pathname); }
+    if (t) {
+      setToken(t);
+      // Clean URL without reload
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   });
 
   const setCheck = (id, val) => setChecks(c => ({ ...c, [id]: val }));
