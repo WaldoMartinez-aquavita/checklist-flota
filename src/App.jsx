@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import Dashboard from "./Dashboard.jsx";
 
 // ─── Pegá acá la URL de tu Google Apps Script después de publicarlo ───────────
 const APPS_SCRIPT_URL = "";
@@ -63,6 +64,7 @@ const css = `
   .type-btn { border:2px solid var(--border); border-radius:var(--radius); background:var(--card); color:var(--muted); font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:14px; letter-spacing:1px; text-transform:uppercase; padding:14px; cursor:pointer; transition:all .2s; text-align:center; }
   .type-btn.active-salida  { border-color:var(--accent); background:rgba(245,166,35,.12); color:var(--accent); }
   .type-btn.active-retorno { border-color:#3b82f6; background:rgba(59,130,246,.12); color:#3b82f6; }
+  .type-btn.active-noopera { border-color:#64748b; background:rgba(100,116,139,.12); color:#94a3b8; }
   .rs-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 20px 12px; }
   .rs-btn { border:2px solid var(--border); border-radius:var(--radius); background:var(--card); color:var(--muted); font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:14px; letter-spacing:1px; padding:14px; cursor:pointer; transition:all .2s; text-align:center; }
   .rs-btn.active-av { border-color:#3b82f6; background:rgba(59,130,246,.12); color:#3b82f6; }
@@ -193,7 +195,7 @@ export default function FleetChecklist() {
       const dateStr  = now.toLocaleDateString("es-AR");
       const timeStr  = now.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
       const nokItems = CHECKLIST_ITEMS.filter(i => checks[i.id] === "nok").map(i => i.label);
-      const estado   = hasNok ? "NOK: " + nokItems.join(", ") : "OK - COMPLETO";
+      const estado   = tipo === "noopera" ? "NO OPERA" : hasNok ? "NOK: " + nokItems.join(", ") : "OK - COMPLETO";
 
       const payload = {
         fecha: dateStr, hora: timeStr, tipo: tipo.toUpperCase(),
@@ -249,6 +251,7 @@ export default function FleetChecklist() {
             <div className="mode-toggle">
               <button className={`mode-btn ${view==="checklist"?"active":""}`}  onClick={()=>setView("checklist")}>Check</button>
               <button className={`mode-btn ${view==="supervisor"?"active":""}`} onClick={()=>{ setView("supervisor"); loadLogs(); }}>Panel</button>
+              <button className={`mode-btn ${view==="dashboard"?"active":""}`}  onClick={()=>setView("dashboard")}>📊</button>
               <button className={`mode-btn ${view==="config"?"active":""}`}     onClick={()=>setView("config")}>⚙</button>
             </div>
           </div>
@@ -284,19 +287,19 @@ export default function FleetChecklist() {
             </select>
           </div>
 
-          <div className="section-title">Revisión de ítems</div>
-          <div className="progress-wrap">
+          {tipo !== "noopera" && <div className="section-title">Revisión de ítems</div>}
+          {tipo !== "noopera" && <div className="progress-wrap">
             <div className="progress-label"><span>Progreso</span><span>{answered}/{total} revisados</span></div>
             <div className="progress-bar"><div className="progress-fill" style={{width:`${pct}%`}}/></div>
-          </div>
-          <div className="cat-strip">
+          </div>}
+          {tipo !== "noopera" && <div className="cat-strip">
             {["All",...CATEGORIES].map(c=>(
               <button key={c} className={`cat-chip ${activeCat===c?"active":""}`} onClick={()=>setActiveCat(c)}>
                 {c==="All"?"Todos":c}
               </button>
             ))}
-          </div>
-          <div className="check-group">
+          </div>}
+          {tipo !== "noopera" && <div className="check-group">
             {filtered.map(item => {
               const val = checks[item.id];
               return (
@@ -310,7 +313,7 @@ export default function FleetChecklist() {
                 </div>
               );
             })}
-          </div>
+          </div>}
 
           <div className="section-title">Observaciones</div>
           <div className="field">
@@ -384,6 +387,9 @@ export default function FleetChecklist() {
             </div>
           ))}
         </>)}
+
+        {/* ── DASHBOARD ── */}
+        {view === "dashboard" && <Dashboard />}
 
         {/* ── CONFIG ── */}
         {view === "config" && (<>
