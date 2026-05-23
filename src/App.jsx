@@ -3,6 +3,18 @@ import Dashboard from "./Dashboard.jsx";
 
 const APPS_SCRIPT_URL = "";
 
+const USERS = [
+  { usuario: "Waldo Martinez",     password: "waldo.47" },
+  { usuario: "Alexander Ponce",    password: "alex.82" },
+  { usuario: "Claudio Borras",     password: "clau.31" },
+  { usuario: "Ramiro Delgado",     password: "rami.65" },
+  { usuario: "Daniel Angelli",     password: "dani.19" },
+  { usuario: "Gonzalo Facciolini", password: "gonza.53" },
+  { usuario: "Juan Barrientos",    password: "juan.74" },
+  { usuario: "Franco Barrientos",  password: "franco.28" },
+  { usuario: "Silvana Ledesma",    password: "silvi.96" },
+];
+
 const CHECKLIST_ITEMS = [
   { id: "agua",        label: "Agua (radiador / reserva)",   icon: "💧", category: "Motor" },
   { id: "aceite",      label: "Nivel de aceite",              icon: "🛢️", category: "Motor" },
@@ -47,10 +59,29 @@ const css = `
   }
   body { font-family:'Barlow',sans-serif; background:var(--black); color:var(--text); min-height:100vh; -webkit-font-smoothing:antialiased; }
   .app { max-width:480px; margin:0 auto; padding:0 0 80px; }
+
+  /* LOGIN */
+  .login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .login-card { background:var(--panel); border:1.5px solid var(--border); border-radius:16px; padding:36px 28px; width:100%; max-width:380px; }
+  .login-logo { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:28px; color:var(--accent); text-align:center; margin-bottom:4px; }
+  .login-logo span { color:var(--text); }
+  .login-sub { text-align:center; font-size:13px; color:var(--muted); margin-bottom:28px; }
+  .login-field { margin-bottom:16px; }
+  .login-field label { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:6px; }
+  .login-field select, .login-field input { width:100%; background:var(--card); border:1.5px solid var(--border); border-radius:var(--radius); color:var(--text); font-family:'Barlow',sans-serif; font-size:15px; padding:12px 14px; appearance:none; outline:none; transition:border .2s; }
+  .login-field select:focus, .login-field input:focus { border-color:var(--accent); }
+  .login-btn { width:100%; padding:14px; border-radius:var(--radius); border:none; background:var(--accent); color:var(--black); font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:16px; letter-spacing:2px; text-transform:uppercase; cursor:pointer; margin-top:8px; transition:opacity .2s; }
+  .login-btn:hover { opacity:.9; }
+  .login-error { background:rgba(231,76,60,.12); border:1px solid var(--nok); border-radius:8px; padding:10px 14px; color:var(--nok); font-size:13px; text-align:center; margin-top:12px; }
+
   .header { background:var(--panel); border-bottom:2px solid var(--accent); padding:16px 20px 12px; position:sticky; top:0; z-index:100; }
   .header-top { display:flex; align-items:center; justify-content:space-between; }
   .logo { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:22px; letter-spacing:1px; color:var(--accent); }
   .logo span { color:var(--text); }
+  .header-right { display:flex; align-items:center; gap:8px; }
+  .user-name { font-size:11px; color:var(--muted); font-family:'Barlow Condensed',sans-serif; letter-spacing:1px; }
+  .logout-btn { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:10px; letter-spacing:1px; text-transform:uppercase; padding:4px 10px; border-radius:20px; border:1.5px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all .2s; }
+  .logout-btn:hover { border-color:var(--nok); color:var(--nok); }
   .mode-toggle { display:flex; gap:6px; }
   .mode-btn { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:11px; letter-spacing:1px; text-transform:uppercase; padding:5px 12px; border-radius:20px; border:1.5px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all .2s; }
   .mode-btn.active { background:var(--accent); color:var(--black); border-color:var(--accent); }
@@ -151,7 +182,48 @@ const css = `
   code { background:var(--panel); padding:2px 6px; border-radius:4px; font-size:11px; color:var(--accent); }
 `;
 
+function LoginScreen({ onLogin }) {
+  const [userSel, setUserSel] = useState("");
+  const [pass, setPass]       = useState("");
+  const [error, setError]     = useState("");
+
+  const handleLogin = () => {
+    const found = USERS.find(u => u.usuario === userSel && u.password === pass);
+    if (found) { onLogin(found.usuario); }
+    else { setError("Usuario o contraseña incorrectos"); }
+  };
+
+  return (
+    <div className="login-wrap">
+      <div className="login-card">
+        <div className="login-logo">CHECKLIST <span>DE FLOTA</span></div>
+        <div className="login-sub">Ingresá para continuar</div>
+        <div className="login-field">
+          <label>Usuario</label>
+          <select value={userSel} onChange={e=>{ setUserSel(e.target.value); setError(""); }}>
+            <option value="">Seleccioná tu usuario...</option>
+            {USERS.map(u=><option key={u.usuario}>{u.usuario}</option>)}
+          </select>
+        </div>
+        <div className="login-field">
+          <label>Contraseña</label>
+          <input
+            type="password"
+            value={pass}
+            onChange={e=>{ setPass(e.target.value); setError(""); }}
+            onKeyDown={e=>e.key==="Enter"&&handleLogin()}
+            placeholder="••••••••"
+          />
+        </div>
+        <button className="login-btn" onClick={handleLogin}>Ingresar</button>
+        {error && <div className="login-error">⚠️ {error}</div>}
+      </div>
+    </div>
+  );
+}
+
 export default function FleetChecklist() {
+  const [currentUser, setCurrentUser] = useState(null);
   const [view, setView]               = useState("checklist");
   const [tipo, setTipo]               = useState("salida");
   const [razonSocial, setRazonSocial] = useState("");
@@ -171,6 +243,13 @@ export default function FleetChecklist() {
 
   const fileRef = useRef();
   const isNoOpera = tipo === "noopera";
+
+  if (!currentUser) return (
+    <>
+      <style>{css}</style>
+      <LoginScreen onLogin={u => setCurrentUser(u)} />
+    </>
+  );
 
   const showToast = (msg, type = "ok") => {
     setToast({ msg, type });
@@ -212,6 +291,7 @@ export default function FleetChecklist() {
         razonSocial, vehiculo, chofer, estado,
         obs: obs || "-",
         comentChofer: comentChofer || "-",
+        usuarioApp: currentUser,
         items: isNoOpera ? {} : CHECKLIST_ITEMS.reduce((acc, i) => { acc[i.label] = checks[i.id]?.toUpperCase() || "-"; return acc; }, {}),
         fotos: photos.map(p => p.url),
       };
@@ -264,11 +344,15 @@ export default function FleetChecklist() {
         <div className="header">
           <div className="header-top">
             <div className="logo">CHECKLIST <span>DE FLOTA</span></div>
-            <div className="mode-toggle">
-              <button className={`mode-btn ${view==="checklist"?"active":""}`}  onClick={()=>setView("checklist")}>Check</button>
-              <button className={`mode-btn ${view==="supervisor"?"active":""}`} onClick={()=>{ setView("supervisor"); loadLogs(); }}>Panel</button>
-              <button className={`mode-btn ${view==="dashboard"?"active":""}`}  onClick={()=>setView("dashboard")}>📊</button>
-              <button className={`mode-btn ${view==="config"?"active":""}`}     onClick={()=>setView("config")}>⚙</button>
+            <div className="header-right">
+              <span className="user-name">{currentUser.split(" ")[0].toUpperCase()}</span>
+              <button className="logout-btn" onClick={()=>setCurrentUser(null)}>Salir</button>
+              <div className="mode-toggle">
+                <button className={`mode-btn ${view==="checklist"?"active":""}`}  onClick={()=>setView("checklist")}>Check</button>
+                <button className={`mode-btn ${view==="supervisor"?"active":""}`} onClick={()=>{ setView("supervisor"); loadLogs(); }}>Panel</button>
+                <button className={`mode-btn ${view==="dashboard"?"active":""}`}  onClick={()=>setView("dashboard")}>📊</button>
+                <button className={`mode-btn ${view==="config"?"active":""}`}     onClick={()=>setView("config")}>⚙</button>
+              </div>
             </div>
           </div>
         </div>
@@ -304,7 +388,6 @@ export default function FleetChecklist() {
             </select>
           </div>
 
-          {/* ── NO OPERA ── */}
           {isNoOpera && (<>
             <div className="noopera-banner">
               <div className="icon">🚫</div>
@@ -316,7 +399,6 @@ export default function FleetChecklist() {
             </div>
           </>)}
 
-          {/* ── CHECKLIST NORMAL ── */}
           {!isNoOpera && (<>
             <div className="section-title">Revisión de ítems</div>
             <div className="progress-wrap">
@@ -403,7 +485,7 @@ export default function FleetChecklist() {
           )}
           {loadingLogs && <div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Cargando...</div>}
           {!loadingLogs && logs.length === 0 && (
-            <div className="log-empty"><div className="log-empty-icon">📋</div><p>Sin registros aún</p><p style={{fontSize:12,marginTop:8}}>Los checklists aparecerán acá</p></div>
+            <div className="log-empty"><div className="log-empty-icon">📋</div><p>Sin registros aún</p></div>
           )}
           {logs.map((log,i) => (
             <div key={i} className="log-item">
