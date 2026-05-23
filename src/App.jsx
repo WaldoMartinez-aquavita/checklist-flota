@@ -31,6 +31,7 @@ const VEHICLES = [
   "HVO795-MOV06","AB332IZ-MOV08","MPD331-MOV09","PLG501-MOV02",
   "OEQ501-MOV01","DOP835-MOV11","AH284RJ-MOV21","HWW240-MOV14",
   "HHP896-MOV15","LKY367-MOV04","KLK758","VWK857","OEQ501-MOV (KIA 2500)",
+  "PJF060-MOV23","PDJ977-MOV24","JMK034-MOV25","AH284RI-MOV26",
 ];
 
 const PLAYEROS = [
@@ -59,10 +60,11 @@ const css = `
   .field select, .field input, .field textarea { width:100%; background:var(--card); border:1.5px solid var(--border); border-radius:var(--radius); color:var(--text); font-family:'Barlow',sans-serif; font-size:15px; padding:12px 14px; appearance:none; outline:none; transition:border .2s; }
   .field select:focus, .field input:focus, .field textarea:focus { border-color:var(--accent); }
   .field textarea { resize:none; min-height:80px; }
-  .type-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 20px 12px; }
-  .type-btn { border:2px solid var(--border); border-radius:var(--radius); background:var(--card); color:var(--muted); font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:14px; letter-spacing:1px; text-transform:uppercase; padding:14px; cursor:pointer; transition:all .2s; text-align:center; }
+  .type-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; padding:0 20px 12px; }
+  .type-btn { border:2px solid var(--border); border-radius:var(--radius); background:var(--card); color:var(--muted); font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:1px; text-transform:uppercase; padding:14px 8px; cursor:pointer; transition:all .2s; text-align:center; }
   .type-btn.active-salida  { border-color:var(--accent); background:rgba(245,166,35,.12); color:var(--accent); }
   .type-btn.active-retorno { border-color:#3b82f6; background:rgba(59,130,246,.12); color:#3b82f6; }
+  .type-btn.active-noopera { border-color:#64748b; background:rgba(100,116,139,.15); color:#94a3b8; }
   .rs-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 20px 12px; }
   .rs-btn { border:2px solid var(--border); border-radius:var(--radius); background:var(--card); color:var(--muted); font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:14px; letter-spacing:1px; padding:14px; cursor:pointer; transition:all .2s; text-align:center; }
   .rs-btn.active-av { border-color:#3b82f6; background:rgba(59,130,246,.12); color:#3b82f6; }
@@ -95,9 +97,13 @@ const css = `
   .progress-fill { height:100%; background:var(--accent); border-radius:3px; transition:width .3s; }
   .submit-wrap { padding:20px; }
   .submit-btn { width:100%; padding:18px; border-radius:var(--radius); border:none; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:18px; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:all .2s; }
-  .submit-btn.ready    { background:var(--accent); color:var(--black); }
-  .submit-btn.disabled { background:var(--border); color:var(--muted); cursor:not-allowed; }
-  .submit-btn.loading  { background:var(--accent); color:var(--black); opacity:.7; }
+  .submit-btn.ready         { background:var(--accent); color:var(--black); }
+  .submit-btn.ready-noopera { background:#475569; color:#fff; }
+  .submit-btn.disabled      { background:var(--border); color:var(--muted); cursor:not-allowed; }
+  .submit-btn.loading       { background:var(--accent); color:var(--black); opacity:.7; }
+  .noopera-banner { margin:0 20px 4px; background:rgba(100,116,139,.1); border:2px solid #475569; border-radius:var(--radius); padding:18px 16px; text-align:center; }
+  .noopera-banner .icon { font-size:32px; margin-bottom:8px; }
+  .noopera-banner p { font-family:'Barlow Condensed',sans-serif; font-size:15px; color:#94a3b8; letter-spacing:.5px; line-height:1.5; }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--ok); color:#fff; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:14px; letter-spacing:1px; padding:12px 24px; border-radius:30px; z-index:999; animation:fadeInUp .3s ease; white-space:nowrap; }
   .toast.error { background:var(--nok); }
   @keyframes fadeInUp { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
@@ -118,13 +124,16 @@ const css = `
   .log-badge { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:11px; letter-spacing:1px; padding:3px 10px; border-radius:20px; text-transform:uppercase; }
   .badge-salida  { background:rgba(245,166,35,.2); color:var(--accent); }
   .badge-retorno { background:rgba(59,130,246,.2); color:#3b82f6; }
+  .badge-noopera { background:rgba(100,116,139,.2); color:#94a3b8; }
   .badge-av { background:rgba(59,130,246,.2); color:#3b82f6; }
   .badge-sp { background:rgba(168,85,247,.2); color:#a855f7; }
   .log-meta { font-size:12px; color:var(--muted); margin-bottom:8px; }
-  .log-items { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px; }
+  .log-items { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px; }
   .li-chip { font-size:11px; padding:2px 8px; border-radius:20px; font-weight:600; }
-  .li-ok  { background:rgba(46,204,113,.15); color:var(--ok); }
-  .li-nok { background:rgba(231,76,60,.15);  color:var(--nok); }
+  .li-ok   { background:rgba(46,204,113,.15); color:var(--ok); }
+  .li-nok  { background:rgba(231,76,60,.15);  color:var(--nok); }
+  .li-noop { background:rgba(100,116,139,.15); color:#94a3b8; }
+  .log-comment { font-size:12px; color:#94a3b8; margin-top:4px; font-style:italic; }
   .log-empty { text-align:center; padding:60px 20px; color:var(--muted); }
   .log-empty-icon { font-size:48px; margin-bottom:12px; }
   .log-empty p { font-family:'Barlow Condensed',sans-serif; font-size:16px; letter-spacing:1px; }
@@ -149,6 +158,7 @@ export default function FleetChecklist() {
   const [vehiculo, setVehiculo]       = useState("");
   const [chofer, setChofer]           = useState("");
   const [obs, setObs]                 = useState("");
+  const [comentChofer, setComentChofer] = useState("");
   const [checks, setChecks]           = useState({});
   const [photos, setPhotos]           = useState([]);
   const [activeCat, setActiveCat]     = useState("All");
@@ -160,6 +170,7 @@ export default function FleetChecklist() {
   const [scriptInput, setScriptInput] = useState(localStorage.getItem("fc_script") || APPS_SCRIPT_URL);
 
   const fileRef = useRef();
+  const isNoOpera = tipo === "noopera";
 
   const showToast = (msg, type = "ok") => {
     setToast({ msg, type });
@@ -182,35 +193,38 @@ export default function FleetChecklist() {
   };
 
   const handleSubmit = async () => {
-    if (!vehiculo || !chofer)  { showToast("Completá vehículo y playero", "error"); return; }
-    if (!razonSocial)          { showToast("Seleccioná la razón social", "error"); return; }
-    if (answered < total)      { showToast(`Faltan ${total - answered} ítems`, "error"); return; }
-    if (!scriptUrl)            { showToast("Configurá la URL del script en ⚙", "error"); return; }
+    if (!vehiculo || !chofer)           { showToast("Completá vehículo y playero", "error"); return; }
+    if (!razonSocial)                   { showToast("Seleccioná la razón social", "error"); return; }
+    if (!isNoOpera && answered < total) { showToast(`Faltan ${total - answered} ítems`, "error"); return; }
+    if (!scriptUrl)                     { showToast("Configurá la URL del script en ⚙", "error"); return; }
 
     setLoading(true);
     try {
-      const now      = new Date();
-      const dateStr  = now.toLocaleDateString("es-AR");
-      const timeStr  = now.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+      const now     = new Date();
+      const dateStr = now.toLocaleDateString("es-AR");
+      const timeStr = now.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
       const nokItems = CHECKLIST_ITEMS.filter(i => checks[i.id] === "nok").map(i => i.label);
-      const estado   = hasNok ? "NOK: " + nokItems.join(", ") : "OK - COMPLETO";
+      const estado  = isNoOpera ? "NO OPERA" : hasNok ? "NOK: " + nokItems.join(", ") : "OK - COMPLETO";
 
       const payload = {
-        fecha: dateStr, hora: timeStr, tipo: tipo.toUpperCase(),
-        razonSocial, vehiculo, chofer, estado, obs: obs || "-",
-        items: CHECKLIST_ITEMS.reduce((acc, i) => { acc[i.label] = checks[i.id]?.toUpperCase() || "-"; return acc; }, {}),
+        fecha: dateStr, hora: timeStr,
+        tipo: isNoOpera ? "NOOPERA" : tipo.toUpperCase(),
+        razonSocial, vehiculo, chofer, estado,
+        obs: obs || "-",
+        comentChofer: comentChofer || "-",
+        items: isNoOpera ? {} : CHECKLIST_ITEMS.reduce((acc, i) => { acc[i.label] = checks[i.id]?.toUpperCase() || "-"; return acc; }, {}),
         fotos: photos.map(p => p.url),
       };
 
       await fetch(scriptUrl, {
-        method: "POST",
-        mode: "no-cors",
+        method: "POST", mode: "no-cors",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      showToast("✅ Checklist guardado correctamente");
-      setChecks({}); setPhotos([]); setObs(""); setRazonSocial(""); setVehiculo(""); setChofer("");
+      showToast(isNoOpera ? "🚫 No opera registrado" : "✅ Checklist guardado correctamente");
+      setChecks({}); setPhotos([]); setObs(""); setComentChofer("");
+      setRazonSocial(""); setVehiculo(""); setChofer(""); setTipo("salida");
     } catch (e) {
       showToast("Error de conexión: " + e.message, "error");
     } finally {
@@ -238,6 +252,10 @@ export default function FleetChecklist() {
     showToast("Configuración guardada ✓");
   };
 
+  const submitReady = isNoOpera
+    ? !!(vehiculo && chofer && razonSocial)
+    : answered === total && !!vehiculo && !!chofer && !!razonSocial;
+
   return (
     <>
       <style>{css}</style>
@@ -261,6 +279,7 @@ export default function FleetChecklist() {
           <div className="type-row">
             <button className={`type-btn ${tipo==="salida"?"active-salida":""}`}   onClick={()=>setTipo("salida")}>🚀 Salida</button>
             <button className={`type-btn ${tipo==="retorno"?"active-retorno":""}`} onClick={()=>setTipo("retorno")}>🏁 Retorno</button>
+            <button className={`type-btn ${tipo==="noopera"?"active-noopera":""}`} onClick={()=>setTipo("noopera")}>🚫 No opera</button>
           </div>
 
           <div className="section-title">Razón Social</div>
@@ -269,7 +288,7 @@ export default function FleetChecklist() {
             <button className={`rs-btn ${razonSocial==="Sparkling"?"active-sp":""}`}  onClick={()=>setRazonSocial("Sparkling")}>✨ Sparkling</button>
           </div>
 
-          <div className="section-title">Datos del viaje</div>
+          <div className="section-title">Datos del vehículo</div>
           <div className="field">
             <label>Vehículo</label>
             <select value={vehiculo} onChange={e=>setVehiculo(e.target.value)}>
@@ -285,63 +304,83 @@ export default function FleetChecklist() {
             </select>
           </div>
 
-          <div className="section-title">Revisión de ítems</div>
-          <div className="progress-wrap">
-            <div className="progress-label"><span>Progreso</span><span>{answered}/{total} revisados</span></div>
-            <div className="progress-bar"><div className="progress-fill" style={{width:`${pct}%`}}/></div>
-          </div>
-          <div className="cat-strip">
-            {["All",...CATEGORIES].map(c=>(
-              <button key={c} className={`cat-chip ${activeCat===c?"active":""}`} onClick={()=>setActiveCat(c)}>
-                {c==="All"?"Todos":c}
-              </button>
-            ))}
-          </div>
-          <div className="check-group">
-            {filtered.map(item => {
-              const val = checks[item.id];
-              return (
-                <div key={item.id} className={`check-item ${val||""}`}>
-                  <span className="check-icon">{item.icon}</span>
-                  <span className="check-label">{item.label}</span>
-                  <div className="check-btns">
-                    <button className={`chk-btn ${val==="ok"?"ok-active":""}`}   onClick={()=>setCheck(item.id,"ok")}>✓</button>
-                    <button className={`chk-btn ${val==="nok"?"nok-active":""}`} onClick={()=>setCheck(item.id,"nok")}>✗</button>
+          {/* ── NO OPERA ── */}
+          {isNoOpera && (<>
+            <div className="noopera-banner">
+              <div className="icon">🚫</div>
+              <p>Este vehículo <b>no sale a reparto hoy</b>.<br/>Completá el motivo y confirmá.</p>
+            </div>
+            <div className="section-title">Motivo de no operación</div>
+            <div className="field">
+              <textarea value={obs} onChange={e=>setObs(e.target.value)} placeholder="Ej: En taller, sin conductor disponible, feriado, reserva..." />
+            </div>
+          </>)}
+
+          {/* ── CHECKLIST NORMAL ── */}
+          {!isNoOpera && (<>
+            <div className="section-title">Revisión de ítems</div>
+            <div className="progress-wrap">
+              <div className="progress-label"><span>Progreso</span><span>{answered}/{total} revisados</span></div>
+              <div className="progress-bar"><div className="progress-fill" style={{width:`${pct}%`}}/></div>
+            </div>
+            <div className="cat-strip">
+              {["All",...CATEGORIES].map(c=>(
+                <button key={c} className={`cat-chip ${activeCat===c?"active":""}`} onClick={()=>setActiveCat(c)}>
+                  {c==="All"?"Todos":c}
+                </button>
+              ))}
+            </div>
+            <div className="check-group">
+              {filtered.map(item => {
+                const val = checks[item.id];
+                return (
+                  <div key={item.id} className={`check-item ${val||""}`}>
+                    <span className="check-icon">{item.icon}</span>
+                    <span className="check-label">{item.label}</span>
+                    <div className="check-btns">
+                      <button className={`chk-btn ${val==="ok"?"ok-active":""}`}   onClick={()=>setCheck(item.id,"ok")}>✓</button>
+                      <button className={`chk-btn ${val==="nok"?"nok-active":""}`} onClick={()=>setCheck(item.id,"nok")}>✗</button>
+                    </div>
                   </div>
+                );
+              })}
+            </div>
+
+            <div className="section-title">Observaciones del playero</div>
+            <div className="field">
+              <textarea value={obs} onChange={e=>setObs(e.target.value)} placeholder="Anomalías, notas adicionales..." />
+            </div>
+
+            <div className="section-title">Comentario del chofer</div>
+            <div className="field">
+              <textarea value={comentChofer} onChange={e=>setComentChofer(e.target.value)} placeholder="El chofer puede dejar aclaraciones, pedidos o novedades del viaje..." />
+            </div>
+
+            <div className="section-title">Fotos</div>
+            <div className="photo-section">
+              {photos.length > 0 && (
+                <div className="photo-grid">
+                  {photos.map((p,i)=>(
+                    <div key={i} className="photo-thumb">
+                      <img src={p.url} alt=""/>
+                      <button className="photo-del" onClick={()=>setPhotos(ph=>ph.filter((_,j)=>j!==i))}>✕</button>
+                    </div>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
-
-          <div className="section-title">Observaciones</div>
-          <div className="field">
-            <textarea value={obs} onChange={e=>setObs(e.target.value)} placeholder="Notas adicionales, anomalías, etc..." />
-          </div>
-
-          <div className="section-title">Fotos</div>
-          <div className="photo-section">
-            {photos.length > 0 && (
-              <div className="photo-grid">
-                {photos.map((p,i)=>(
-                  <div key={i} className="photo-thumb">
-                    <img src={p.url} alt=""/>
-                    <button className="photo-del" onClick={()=>setPhotos(ph=>ph.filter((_,j)=>j!==i))}>✕</button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <input ref={fileRef} type="file" accept="image/*" multiple capture="environment" style={{display:"none"}} onChange={handlePhoto}/>
-            <button className="add-photo-btn" onClick={()=>fileRef.current.click()}>📷 Agregar foto</button>
-          </div>
+              )}
+              <input ref={fileRef} type="file" accept="image/*" multiple capture="environment" style={{display:"none"}} onChange={handlePhoto}/>
+              <button className="add-photo-btn" onClick={()=>fileRef.current.click()}>📷 Agregar foto</button>
+            </div>
+          </>)}
 
           <div className="submit-wrap">
             <button
-              className={`submit-btn ${loading?"loading":answered===total&&vehiculo&&chofer&&razonSocial?"ready":"disabled"}`}
+              className={`submit-btn ${loading?"loading":submitReady?(isNoOpera?"ready-noopera":"ready"):"disabled"}`}
               onClick={!loading ? handleSubmit : undefined}
             >
-              {loading ? "Guardando..." : `✅ Confirmar ${tipo}`}
+              {loading ? "Guardando..." : isNoOpera ? "🚫 Confirmar No Opera" : `✅ Confirmar ${tipo}`}
             </button>
-            {hasNok && answered===total && (
+            {hasNok && !isNoOpera && answered===total && (
               <p style={{textAlign:"center",color:"#e74c3c",fontSize:12,marginTop:10,fontWeight:600}}>
                 ⚠️ Hay ítems NOK — se guardará con alerta
               </p>
@@ -359,7 +398,7 @@ export default function FleetChecklist() {
             <div className="stats-grid">
               <div className="stat-card"><div className="stat-num yellow">{logs.length}</div><div className="stat-lbl">Total</div></div>
               <div className="stat-card"><div className="stat-num green">{logs.filter(l=>l.estado?.startsWith("OK")).length}</div><div className="stat-lbl">Sin NOK</div></div>
-              <div className="stat-card"><div className="stat-num red">{logs.filter(l=>!l.estado?.startsWith("OK")).length}</div><div className="stat-lbl">Con NOK</div></div>
+              <div className="stat-card"><div className="stat-num red">{logs.filter(l=>l.estado==="NO OPERA").length}</div><div className="stat-lbl">No operaron</div></div>
             </div>
           )}
           {loadingLogs && <div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Cargando...</div>}
@@ -377,11 +416,12 @@ export default function FleetChecklist() {
               </div>
               <div className="log-meta">📅 {log.fecha} {log.hora} · 👤 {log.chofer}</div>
               <div className="log-items">
-                <span className={`li-chip ${log.estado?.startsWith("OK")?"li-ok":"li-nok"}`}>
-                  {log.estado?.startsWith("OK") ? "✓ Todo OK" : "⚠️ "+log.estado}
+                <span className={`li-chip ${log.estado==="NO OPERA"?"li-noop":log.estado?.startsWith("OK")?"li-ok":"li-nok"}`}>
+                  {log.estado==="NO OPERA" ? "🚫 No opera" : log.estado?.startsWith("OK") ? "✓ Todo OK" : "⚠️ "+log.estado}
                 </span>
               </div>
-              {log.obs && log.obs!=="-" && <p style={{fontSize:12,color:"var(--muted)"}}>💬 {log.obs}</p>}
+              {log.obs && log.obs!=="-" && <p style={{fontSize:12,color:"var(--muted)"}}>📋 {log.obs}</p>}
+              {log.comentChofer && log.comentChofer!=="-" && <p className="log-comment">💬 Chofer: {log.comentChofer}</p>}
             </div>
           ))}
         </>)}
