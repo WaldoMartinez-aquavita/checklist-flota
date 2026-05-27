@@ -247,7 +247,7 @@ export default function FleetChecklist() {
   if (!currentUser) return (
     <>
       <style>{css}</style>
-      <LoginScreen onLogin={u => setCurrentUser(u)} />
+      <LoginScreen onLogin={u => { setCurrentUser(u); setChofer(u); }} />
     </>
   );
 
@@ -346,7 +346,7 @@ export default function FleetChecklist() {
             <div className="logo">CHECKLIST <span>DE FLOTA</span></div>
             <div className="header-right">
               <span className="user-name">{currentUser.split(" ")[0].toUpperCase()}</span>
-              <button className="logout-btn" onClick={()=>setCurrentUser(null)}>Salir</button>
+              <button className="logout-btn" onClick={()=>{ setCurrentUser(null); setChofer(""); }}>Salir</button>
               <div className="mode-toggle">
                 <button className={`mode-btn ${view==="checklist"?"active":""}`}  onClick={()=>setView("checklist")}>Check</button>
                 <button className={`mode-btn ${view==="supervisor"?"active":""}`} onClick={()=>{ setView("supervisor"); loadLogs(); }}>Panel</button>
@@ -382,10 +382,9 @@ export default function FleetChecklist() {
           </div>
           <div className="field">
             <label>Responsable / Playero</label>
-            <select value={chofer} onChange={e=>setChofer(e.target.value)}>
-              <option value="">Seleccioná el playero...</option>
-              {PLAYEROS.map(p=><option key={p}>{p}</option>)}
-            </select>
+            <div style={{background:"var(--card)",border:"1.5px solid var(--border)",borderRadius:"var(--radius)",padding:"12px 14px",fontSize:15,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
+              <span>👤</span> {chofer}
+            </div>
           </div>
 
           {isNoOpera && (<>
